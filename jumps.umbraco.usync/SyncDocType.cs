@@ -14,6 +14,12 @@ using umbraco.BusinessLogic;
 using Umbraco.Core.IO;
 using umbraco;
 
+#if UMBRACO6
+using Umbraco.Core ; 
+using Umbraco.Core.Services;
+using Umbraco.Core.Models; 
+#endif
+
 namespace jumps.umbraco.usync
 {
     /// <summary>
@@ -103,6 +109,7 @@ namespace jumps.umbraco.usync
          
             return path; 
         }
+
         
         /// <summary>
         /// Gets all teh documentTypes from the disk, and puts them into
@@ -175,10 +182,35 @@ namespace jumps.umbraco.usync
         /// </summary>
         public static void AttachEvents()
         {
+#if UMBRACO6
+            ContentTypeService.DeletingContentType += ContentTypeService_DeletingContentType;
+            ContentTypeService.SavedContentType += ContentTypeService_SavedContentType;
+#else
             DocumentType.AfterSave += DocumentType_AfterSave;
             DocumentType.BeforeDelete += DocumentType_BeforeDelete;
+#endif
         }
 
+#if UMBRACO6
+        static void ContentTypeService_SavedContentType(IContentTypeService sender, Umbraco.Core.Events.SaveEventArgs<IContentType> e)
+        {
+            helpers.uSyncLog.DebugLog("SaveContent Type Fired for {0} types", e.SavedEntities.Count());
+            foreach (var docType in e.SavedEntities)
+            {
+                SaveToDisk(new DocumentType(docType.Id));
+            }
+        }
+
+        static void ContentTypeService_DeletingContentType(IContentTypeService sender, Umbraco.Core.Events.DeleteEventArgs<IContentType> e)
+        {
+            helpers.uSyncLog.DebugLog("Deleting Type Fired for {0} types", e.DeletedEntities.Count());
+            // delete things (there can sometimes be more than one??)
+            foreach (var docType in e.DeletedEntities)
+            {
+                helpers.XmlDoc.ArchiveFile("DocumentType", GetDocPath(new DocumentType(docType.Id)), "def") ; 
+            }
+        }
+#else 
         /// <summary>
         ///  called when a document type is about to be deleted. 
         ///  
@@ -202,5 +234,6 @@ namespace jumps.umbraco.usync
         {
             SaveToDisk((DocumentType)sender);             
         }
+#endif 
     }
 }
