@@ -115,6 +115,25 @@ namespace jumps.umbraco.usync
             return path; 
         }
 
+        private static string GetDocPath(IContentType docType)
+        {
+            string path = ""; 
+
+            if ( docType != null )
+            {
+                if (docType.ParentId != 0 )
+                {
+                    LogHelper.Info<SyncDocType>("Parent {0}", () => docType.ParentId);
+                    path = GetDocPath( ApplicationContext.Current.Services.ContentTypeService.GetContentType(docType.ParentId));
+                }
+
+                path = string.Format("{0}\\{1}", path, helpers.XmlDoc.ScrubFile(docType.Alias));
+            }
+
+            return path ; 
+        }
+
+
         
         /// <summary>
         /// Gets all teh documentTypes from the disk, and puts them into
@@ -193,7 +212,7 @@ namespace jumps.umbraco.usync
                 {
                     // load the doctype
                     IContentType docType = ApplicationContext.Current.Services.ContentTypeService.GetContentType(update.Key);
-
+                    
                     if (docType != null)
                     {
                         // import structure
@@ -304,8 +323,37 @@ namespace jumps.umbraco.usync
             helpers.uSyncLog.DebugLog("SaveContent Type Fired for {0} types", e.SavedEntities.Count());
             foreach (var docType in e.SavedEntities)
             {
-                SaveToDisk(new DocumentType(docType.Id));
+                // double save - to see what the diffrences are...
+                SaveToDisk(new DocumentType(docType.Id));                
+                SaveToDisk(docType); 
             }
+        }
+
+        /// <summary>
+        ///  save with the new API.
+        /// </summary>
+        /// <param name="docType"></param>
+        private static void SaveToDisk(IContentType docType)
+        {
+            if (docType != null)
+            {
+                try
+                {
+                    XElement xmlDoc = ApplicationContext.Current.Services.PackagingService.Export(docType);
+
+                    string filename = helpers.XmlDoc.GetFileName("NewDocType", GetDocPath(docType), "def");
+                    if ( !Directory.Exists( Path.GetDirectoryName( filename ) ) )
+                    {
+                        Directory.CreateDirectory( Path.GetDirectoryName(filename) ) ;
+                    }
+                    xmlDoc.Save( filename ) ; 
+                }
+                catch (Exception ex)
+                {
+                    helpers.uSyncLog.DebugLog("uSync: Error Saving DocumentType {0} - {1}", docType.Alias, ex.ToString());
+                }
+            }
+
         }
 
         static void ContentTypeService_DeletingContentType(IContentTypeService sender, Umbraco.Core.Events.DeleteEventArgs<IContentType> e)

@@ -33,6 +33,25 @@ namespace jumps.umbraco.usync.helpers
             _versions = uSyncSettings.Versions;
         }
 
+        #region filename helpers
+        public static string GetFileName(string type, string path, string name)
+        {
+            string filepath = string.Format("{0}/{1}/{2}.config", GetTypeFolder(type), path, name);
+            return GetFileName(filepath);
+        }
+
+        public static string GetFileName(string type, string name)
+        {
+            return GetFileName(string.Format("{0}/{1}.config", GetTypeFolder(type), ScrubFile(name)));
+        }
+
+        public static string GetFileName(string path)
+        {
+            return string.Format("{0}/{1}", IOHelper.MapPath(uSyncIO.RootFolder), path);
+        }
+        #endregion
+
+        #region XML Manipulation
         public static XmlDocument CreateDoc()
         {
             XmlDocument doc = new XmlDocument();
@@ -48,13 +67,13 @@ namespace jumps.umbraco.usync.helpers
             SaveXmlDoc(savePath, doc); 
         }
 
+
         public static void SaveXmlDoc(string type, string name, XmlDocument doc)
         {
             string savePath = string.Format("{0}/{1}.config", GetTypeFolder(type), ScrubFile(name)) ;
             SaveXmlDoc(savePath, doc) ;
         }
-              
-
+          
         public static void SaveXmlDoc(string path, XmlDocument doc)
         {
             string savePath = string.Format("{0}/{1}", IOHelper.MapPath(uSyncIO.RootFolder), path);
@@ -81,6 +100,7 @@ namespace jumps.umbraco.usync.helpers
 
             doc.Save(savePath) ; 
         }
+        #endregion 
 
         /// <summary>
         /// Archive a file (and delete the orgininal) called when a file is deleted
@@ -107,7 +127,6 @@ namespace jumps.umbraco.usync.helpers
 
             string currentFile = string.Format(@"{0}\{1}\{2}.config",
                 liveRoot, GetTypeFolder(type),ScrubFile(name));
-
 
             string archiveFile = string.Format(@"{0}\{1}\{2}_{3}.config",
                 archiveRoot, GetTypeFolder(type), ScrubFile(name), DateTime.Now.ToString("ddMMyy_HHmmss"));
