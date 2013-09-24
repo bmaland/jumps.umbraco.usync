@@ -44,6 +44,8 @@ namespace jumps.umbraco.usync
 
         private bool _docTypeSaveWorks = false; 
 
+        private readonly bool _umbracoIsConfigured = ConfigurationManager.AppSettings["umbracoConfigurationStatus"].Trim() != "";
+
         /// <summary>
         /// do the stuff we do when we start, using locks, and flags so
         /// we only do the stuff once..
@@ -222,6 +224,12 @@ namespace jumps.umbraco.usync
         private void RunSync()
         {
             helpers.uSyncLog.InfoLog("uSync Starting - for detailed debug info. set priority to 'Debug' in log4net.config file"); 
+
+            if (!_umbracoIsConfigured)
+            {
+                helpers.uSyncLog.InfoLog("Umbraco not configured, aborting sync");
+                return;
+            }
 
             // Save Everything to disk.
             // only done first time or when write = true           
